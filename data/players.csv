@@ -1,9 +1,10 @@
-player,position,plus_minus
-Alex Mercer,LW,2
-Jordan Pike,C,1
-Sam Keller,RW,3
-Taylor Reed,RW,0
-Chris Nolan,C,1
-Mason Cole,LW,2
-Ethan Ward,LW,-1
-Logan Price,C,-1
+goal_type,player,position,goal_date
+for,Alex Mercer,LW,2024-11-02
+for,Jordan Pike,C,2024-11-02
+for,Sam Keller,RW,2024-11-02
+against,Alex Mercer,LW,2024-11-02
+for,Chris Nolan,C,2024-11-02
+for,Mason Cole,LW,2024-11-02
+against,Jordan Pike,C,2024-11-02
+against,Sam Keller,RW,2024-11-02
+for,Alex Mercer,LW,2024-11-02

@@ -10,10 +10,21 @@ const attendingPlayers = [
   "Mason Cole"
 ];
 
+type GoalType = "for" | "against";
+
+type GoalEvent = {
+  goal_type: GoalType;
+  player: string;
+  position: "LW" | "C" | "RW";
+  goal_date: string;
+};
+
 type PlayerStat = {
   player: string;
   position: "LW" | "C" | "RW";
   plus_minus: number;
+  goals_for: number;
+  goals_against: number;
 };
 
 type LineCombo = {
@@ -24,7 +35,7 @@ type LineCombo = {
   score: number;
 };
 
-const parseCsv = (contents: string): PlayerStat[] => {
+const parseCsv = (contents: string): GoalEvent[] => {
   const [headerLine, ...rows] = contents.trim().split("\n");
   const headers = headerLine.split(",");
 
@@ -37,19 +48,52 @@ const parseCsv = (contents: string): PlayerStat[] => {
       ) as Record<string, string>;
 
       return {
+        goal_type: record.goal_type as GoalType,
         player: record.player,
         position: record.position as PlayerStat["position"],
-        plus_minus: Number(record.plus_minus)
+        goal_date: record.goal_date
       };
     });
 };
 
 const scoreLine = (plusMinus: number) => plusMinus;
 
-const loadPlayerData = (): PlayerStat[] => {
+const loadGoalData = (): GoalEvent[] => {
   const filePath = path.join(process.cwd(), "data", "players.csv");
   const contents = fs.readFileSync(filePath, "utf8");
   return parseCsv(contents);
+};
+
+const buildPlayerStats = (goals: GoalEvent[]): PlayerStat[] => {
+  const stats = new Map<string, PlayerStat>();
+
+  goals.forEach((goal) => {
+    const current = stats.get(goal.player);
+    const goalsFor = goal.goal_type === "for" ? 1 : 0;
+    const goalsAgainst = goal.goal_type === "against" ? 1 : 0;
+
+    if (!current) {
+      stats.set(goal.player, {
+        player: goal.player,
+        position: goal.position,
+        plus_minus: goalsFor - goalsAgainst,
+        goals_for: goalsFor,
+        goals_against: goalsAgainst
+      });
+      return;
+    }
+
+    stats.set(goal.player, {
+      ...current,
+      plus_minus: current.plus_minus + goalsFor - goalsAgainst,
+      goals_for: current.goals_for + goalsFor,
+      goals_against: current.goals_against + goalsAgainst
+    });
+  });
+
+  return Array.from(stats.values()).sort((a, b) =>
+    a.player.localeCompare(b.player)
+  );
 };
 
 const buildLineCombos = (players: PlayerStat[]): LineCombo[] => {
@@ -78,8 +122,9 @@ const buildLineCombos = (players: PlayerStat[]): LineCombo[] => {
 };
 
 export default function Home() {
-  const players = loadPlayerData();
-  const attendingRoster = players.filter((player) =>
+  const goals = loadGoalData();
+  const playerStats = buildPlayerStats(goals);
+  const attendingRoster = playerStats.filter((player) =>
     attendingPlayers.includes(player.player)
   );
   const combos = buildLineCombos(attendingRoster);
@@ -90,9 +135,9 @@ export default function Home() {
       <section className="section">
         <h1>Line Helper</h1>
         <p>
-          Track last game data by skater using only plus/minus for now. Use the
-          roster list below to create the best LW-C-RW combinations for the next
-          game.
+          Track every goal event per skater. Each entry logs whether the goal was
+          for or against, the player on ice, and the date. The app converts that
+          into plus/minus totals to suggest LW-C-RW combinations.
         </p>
         <div className="tag-list">
           {attendingPlayers.map((player) => (
@@ -110,6 +155,8 @@ export default function Home() {
             <tr>
               <th>Player</th>
               <th>Pos</th>
+              <th>Goals For</th>
+              <th>Goals Against</th>
               <th>+/-</th>
             </tr>
           </thead>
@@ -118,14 +165,15 @@ export default function Home() {
               <tr key={player.player}>
                 <td>{player.player}</td>
                 <td>{player.position}</td>
+                <td>{player.goals_for}</td>
+                <td>{player.goals_against}</td>
                 <td>{player.plus_minus}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <p className="footer-note">
-          Expand the CSV with shots and quality chances when you are ready to
-          track deeper defensive impact.
+          Add more goal events over time to keep the plus/minus totals current.
         </p>
       </section>
 
@@ -178,8 +226,7 @@ export default function Home() {
           </tbody>
         </table>
         <p className="footer-note">
-          Scoring formula: sum of line plus/minus values. Add more metrics when
-          you are ready to weigh defense, shots, or quality chances.
+          Scoring formula: sum of line plus/minus values derived from goal events.
         </p>
       </section>
     </main>
