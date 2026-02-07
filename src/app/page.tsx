@@ -14,10 +14,6 @@ type PlayerStat = {
   player: string;
   position: "LW" | "C" | "RW";
   plus_minus: number;
-  shots_for: number;
-  shots_against: number;
-  quality_for: number;
-  quality_against: number;
 };
 
 type LineCombo = {
@@ -25,10 +21,6 @@ type LineCombo = {
   c: PlayerStat;
   rw: PlayerStat;
   plus_minus: number;
-  shots_for: number;
-  shots_against: number;
-  quality_for: number;
-  quality_against: number;
   score: number;
 };
 
@@ -47,17 +39,12 @@ const parseCsv = (contents: string): PlayerStat[] => {
       return {
         player: record.player,
         position: record.position as PlayerStat["position"],
-        plus_minus: Number(record.plus_minus),
-        shots_for: Number(record.shots_for),
-        shots_against: Number(record.shots_against),
-        quality_for: Number(record.quality_for),
-        quality_against: Number(record.quality_against)
+        plus_minus: Number(record.plus_minus)
       };
     });
 };
 
-const scoreLine = (plusMinus: number, qualityDiff: number, shotDiff: number) =>
-  plusMinus * 2 + qualityDiff + shotDiff * 0.5;
+const scoreLine = (plusMinus: number) => plusMinus;
 
 const loadPlayerData = (): PlayerStat[] => {
   const filePath = path.join(process.cwd(), "data", "players.csv");
@@ -75,24 +62,13 @@ const buildLineCombos = (players: PlayerStat[]): LineCombo[] => {
     centers.forEach((c) => {
       rws.forEach((rw) => {
         const plusMinus = lw.plus_minus + c.plus_minus + rw.plus_minus;
-        const shotsFor = lw.shots_for + c.shots_for + rw.shots_for;
-        const shotsAgainst = lw.shots_against + c.shots_against + rw.shots_against;
-        const qualityFor = lw.quality_for + c.quality_for + rw.quality_for;
-        const qualityAgainst =
-          lw.quality_against + c.quality_against + rw.quality_against;
-        const qualityDiff = qualityFor - qualityAgainst;
-        const shotDiff = shotsFor - shotsAgainst;
 
         combos.push({
           lw,
           c,
           rw,
           plus_minus: plusMinus,
-          shots_for: shotsFor,
-          shots_against: shotsAgainst,
-          quality_for: qualityFor,
-          quality_against: qualityAgainst,
-          score: scoreLine(plusMinus, qualityDiff, shotDiff)
+          score: scoreLine(plusMinus)
         });
       });
     });
@@ -114,9 +90,9 @@ export default function Home() {
       <section className="section">
         <h1>Line Helper</h1>
         <p>
-          Track last game data by skater to capture how each player impacts both
-          offense and defense. Use the roster list below to create the best LW-C-RW
-          combinations for the next game.
+          Track last game data by skater using only plus/minus for now. Use the
+          roster list below to create the best LW-C-RW combinations for the next
+          game.
         </p>
         <div className="tag-list">
           {attendingPlayers.map((player) => (
@@ -135,10 +111,6 @@ export default function Home() {
               <th>Player</th>
               <th>Pos</th>
               <th>+/-</th>
-              <th>Quality For</th>
-              <th>Quality Against</th>
-              <th>Shots For</th>
-              <th>Shots Against</th>
             </tr>
           </thead>
           <tbody>
@@ -147,16 +119,13 @@ export default function Home() {
                 <td>{player.player}</td>
                 <td>{player.position}</td>
                 <td>{player.plus_minus}</td>
-                <td>{player.quality_for}</td>
-                <td>{player.quality_against}</td>
-                <td>{player.shots_for}</td>
-                <td>{player.shots_against}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <p className="footer-note">
-          Tracking against stats helps surface defensive impact for each skater.
+          Expand the CSV with shots and quality chances when you are ready to
+          track deeper defensive impact.
         </p>
       </section>
 
@@ -175,18 +144,6 @@ export default function Home() {
                 <p>+/-</p>
                 <p className="highlight">{topCombo.plus_minus}</p>
               </div>
-              <div>
-                <p>Quality chances</p>
-                <p className="highlight">
-                  {topCombo.quality_for} for / {topCombo.quality_against} against
-                </p>
-              </div>
-              <div>
-                <p>Shot attempts</p>
-                <p className="highlight">
-                  {topCombo.shots_for} for / {topCombo.shots_against} against
-                </p>
-              </div>
             </div>
           </div>
         ) : (
@@ -201,24 +158,18 @@ export default function Home() {
             <tr>
               <th>Line</th>
               <th>+/-</th>
-              <th>Quality For</th>
-              <th>Quality Against</th>
-              <th>Shots For</th>
-              <th>Shots Against</th>
               <th>Score</th>
             </tr>
           </thead>
           <tbody>
             {combos.map((combo, index) => (
-              <tr key={`${combo.lw.player}-${combo.c.player}-${combo.rw.player}-${index}`}>
+              <tr
+                key={`${combo.lw.player}-${combo.c.player}-${combo.rw.player}-${index}`}
+              >
                 <td>
                   {combo.lw.player} · {combo.c.player} · {combo.rw.player}
                 </td>
                 <td>{combo.plus_minus}</td>
-                <td>{combo.quality_for}</td>
-                <td>{combo.quality_against}</td>
-                <td>{combo.shots_for}</td>
-                <td>{combo.shots_against}</td>
                 <td>
                   <span className="score-pill">{combo.score.toFixed(1)}</span>
                 </td>
@@ -227,9 +178,8 @@ export default function Home() {
           </tbody>
         </table>
         <p className="footer-note">
-          Scoring formula: (plus/minus × 2) + quality chance differential +
-          (shot differential × 0.5). Adjust weights as you refine how defensive
-          impact should be valued.
+          Scoring formula: sum of line plus/minus values. Add more metrics when
+          you are ready to weigh defense, shots, or quality chances.
         </p>
       </section>
     </main>

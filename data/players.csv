@@ -1,9 +1,9 @@
-player,position,plus_minus,shots_for,shots_against,quality_for,quality_against
-Alex Mercer,LW,2,9,5,5,2
-Jordan Pike,C,1,8,6,4,3
-Sam Keller,RW,3,10,4,6,1
-Taylor Reed,RW,0,7,7,3,4
-Chris Nolan,C,1,7,6,4,3
-Mason Cole,LW,2,8,5,4,2
-Ethan Ward,LW,-1,6,8,3,5
-Logan Price,C,-1,5,7,2,4
+player,position,plus_minus
+Alex Mercer,LW,2
+Jordan Pike,C,1
+Sam Keller,RW,3
+Taylor Reed,RW,0
+Chris Nolan,C,1
+Mason Cole,LW,2
+Ethan Ward,LW,-1
+Logan Price,C,-1
