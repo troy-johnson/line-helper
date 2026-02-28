@@ -1,127 +1,35 @@
 import fs from "fs";
 import path from "path";
+import {
+  parseCsv,
+  buildPlayerStats,
+  buildLineCombos,
+} from "@/lib/stats";
 
-const attendingPlayers = [
+const DEFAULT_ATTENDING = [
   "Alex Mercer",
   "Jordan Pike",
   "Sam Keller",
   "Taylor Reed",
   "Chris Nolan",
-  "Mason Cole"
+  "Mason Cole",
 ];
 
-type GoalType = "for" | "against";
-
-type GoalEvent = {
-  goal_type: GoalType;
-  player: string;
-  position: "LW" | "C" | "RW";
-  goal_date: string;
-};
-
-type PlayerStat = {
-  player: string;
-  position: "LW" | "C" | "RW";
-  plus_minus: number;
-  goals_for: number;
-  goals_against: number;
-};
-
-type LineCombo = {
-  lw: PlayerStat;
-  c: PlayerStat;
-  rw: PlayerStat;
-  plus_minus: number;
-  score: number;
-};
-
-const parseCsv = (contents: string): GoalEvent[] => {
-  const [headerLine, ...rows] = contents.trim().split("\n");
-  const headers = headerLine.split(",");
-
-  return rows
-    .map((row) => row.split(","))
-    .filter((columns) => columns.length === headers.length)
-    .map((columns) => {
-      const record = Object.fromEntries(
-        headers.map((header, index) => [header, columns[index]])
-      ) as Record<string, string>;
-
-      return {
-        goal_type: record.goal_type as GoalType,
-        player: record.player,
-        position: record.position as PlayerStat["position"],
-        goal_date: record.goal_date
-      };
-    });
-};
-
-const scoreLine = (plusMinus: number) => plusMinus;
-
-const loadGoalData = (): GoalEvent[] => {
+const loadGoalData = () => {
   const filePath = path.join(process.cwd(), "data", "players.csv");
   const contents = fs.readFileSync(filePath, "utf8");
   return parseCsv(contents);
 };
 
-const buildPlayerStats = (goals: GoalEvent[]): PlayerStat[] => {
-  const stats = new Map<string, PlayerStat>();
+export default function Home({
+  searchParams,
+}: {
+  searchParams: { attending?: string };
+}) {
+  const attendingPlayers = searchParams.attending
+    ? searchParams.attending.split(",").map((s) => s.trim()).filter(Boolean)
+    : DEFAULT_ATTENDING;
 
-  goals.forEach((goal) => {
-    const current = stats.get(goal.player);
-    const goalsFor = goal.goal_type === "for" ? 1 : 0;
-    const goalsAgainst = goal.goal_type === "against" ? 1 : 0;
-
-    if (!current) {
-      stats.set(goal.player, {
-        player: goal.player,
-        position: goal.position,
-        plus_minus: goalsFor - goalsAgainst,
-        goals_for: goalsFor,
-        goals_against: goalsAgainst
-      });
-      return;
-    }
-
-    stats.set(goal.player, {
-      ...current,
-      plus_minus: current.plus_minus + goalsFor - goalsAgainst,
-      goals_for: current.goals_for + goalsFor,
-      goals_against: current.goals_against + goalsAgainst
-    });
-  });
-
-  return Array.from(stats.values()).sort((a, b) =>
-    a.player.localeCompare(b.player)
-  );
-};
-
-const buildLineCombos = (players: PlayerStat[]): LineCombo[] => {
-  const lws = players.filter((player) => player.position === "LW");
-  const centers = players.filter((player) => player.position === "C");
-  const rws = players.filter((player) => player.position === "RW");
-  const combos: LineCombo[] = [];
-
-  lws.forEach((lw) => {
-    centers.forEach((c) => {
-      rws.forEach((rw) => {
-        const plusMinus = lw.plus_minus + c.plus_minus + rw.plus_minus;
-
-        combos.push({
-          lw,
-          c,
-          rw,
-          plus_minus: plusMinus,
-          score: scoreLine(plusMinus)
-        });
-      });
-    });
-  });
-
-  return combos.sort((a, b) => b.score - a.score);
-};
-
-export default function Home() {
   const goals = loadGoalData();
   const playerStats = buildPlayerStats(goals);
   const attendingRoster = playerStats.filter((player) =>
@@ -138,6 +46,10 @@ export default function Home() {
           Track every goal event per skater. Each entry logs whether the goal was
           for or against, the player on ice, and the date. The app converts that
           into plus/minus totals to suggest LW-C-RW combinations.
+        </p>
+        <p className="footer-note">
+          Tip: override the roster with{" "}
+          <code>?attending=Player+One,Player+Two</code> in the URL.
         </p>
         <div className="tag-list">
           {attendingPlayers.map((player) => (
@@ -185,7 +97,8 @@ export default function Home() {
               {topCombo.lw.player} · {topCombo.c.player} · {topCombo.rw.player}
             </h3>
             <p className="highlight">
-              Projected score: <span className="score-pill">{topCombo.score.toFixed(1)}</span>
+              Projected score:{" "}
+              <span className="score-pill">{topCombo.score.toFixed(1)}</span>
             </p>
             <div className="grid">
               <div>
@@ -226,7 +139,8 @@ export default function Home() {
           </tbody>
         </table>
         <p className="footer-note">
-          Scoring formula: sum of line plus/minus values derived from goal events.
+          Scoring formula: sum of line plus/minus values derived from goal
+          events.
         </p>
       </section>
     </main>
